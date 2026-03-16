@@ -1,0 +1,33 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.typecheck.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "6.4.1",
+    "@supabase/ssr": "0.5.2",
+    "@supabase/supabase-js": "2.49.1",
+    "next": "15.2.2",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.22.0",
+    "@next/eslint-plugin-next": "15.2.2",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4",
+    "eslint": "9.22.0",
+    "eslint-config-next": "15.2.2",
+    "globals": "15.15.0",
+    "typescript-eslint": "8.26.1",
+    "typescript": "5.8.2"
+  }
+}

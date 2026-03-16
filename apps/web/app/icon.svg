@@ -1,0 +1,31 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark premium gradient background -->
+  <rect width="32" height="32" rx="8" fill="url(#paint0_linear)" />
+  
+  <!-- Outer glowing stroke -->
+  <rect x="1" y="1" width="30" height="30" rx="7" stroke="url(#paint1_linear)" stroke-width="2" />
+  
+  <!-- Inner geometry for Proxora mark -->
+  <circle cx="16" cy="16" r="7" fill="url(#paint2_radial)" />
+  <circle cx="16" cy="16" r="3.6" fill="#0b1624" />
+  <path
+    d="M15.1 12.2H18.2C19.7 12.2 20.9 13.4 20.9 14.9V19.8C20.9 20.5 20.3 21.1 19.6 21.1H13.9C13.2 21.1 12.6 20.5 12.6 19.8V15.7C12.6 13.8 13.2 12.2 15.1 12.2Z"
+    fill="rgba(255,255,255,0.88)"
+  />
+
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101828" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#14243C" stop-opacity="0.78" />
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74b4ff" stop-opacity="0.34" />
+      <stop offset="1" stop-color="#4fffc6" stop-opacity="0.1" />
+    </linearGradient>
+    <radialGradient id="paint2_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(16 16) rotate(90) scale(8 8)">
+      <stop stop-color="#4fffc6" stop-opacity="0.95" />
+      <stop offset="0.6" stop-color="#74b4ff" stop-opacity="0.5" />
+      <stop offset="1" stop-color="#0b1624" stop-opacity="0.2" />
+    </radialGradient>
+  </defs>
+</svg>

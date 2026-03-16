@@ -1,0 +1,493 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/web/src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PlatformRole {
+  USER
+  ADMIN
+
+  @@map("platform_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+
+  @@map("user_status")
+}
+
+enum ProviderStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+
+  @@map("provider_status")
+}
+
+enum ProviderType {
+  OPENAI_COMPATIBLE
+  ANTHROPIC
+  GOOGLE
+  OTHER
+
+  @@map("provider_type")
+}
+
+enum CredentialStatus {
+  PENDING
+  ACTIVE
+  INVALID
+  REVOKED
+
+  @@map("credential_status")
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+
+  @@map("listing_status")
+}
+
+enum VisibilityStatus {
+  PRIVATE
+  PUBLIC
+  UNLISTED
+
+  @@map("visibility_status")
+}
+
+enum RentalDuration {
+  ONE_HOUR
+  TWO_HOURS
+  SIX_HOURS
+  TWENTY_FOUR_HOURS
+
+  @@map("rental_duration")
+}
+
+enum RentalStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  REVOKED
+  COMPLETED
+  CANCELLED
+
+  @@map("rental_status")
+}
+
+enum SessionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  REVOKED
+
+  @@map("session_status")
+}
+
+enum UsageEventType {
+  REQUEST
+  RESPONSE
+  BILLING
+  ADJUSTMENT
+  ERROR
+
+  @@map("usage_event_type")
+}
+
+enum ChatMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+
+  @@map("chat_message_role")
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+
+  @@map("wallet_status")
+}
+
+enum LedgerEntryType {
+  DEPOSIT
+  WITHDRAWAL
+  ESCROW_HOLD
+  ESCROW_RELEASE
+  RENTAL_CHARGE
+  PROVIDER_EARNING
+  PLATFORM_FEE
+  REFUND
+  PAYOUT
+  ADJUSTMENT
+
+  @@map("ledger_entry_type")
+}
+
+enum LedgerDirection {
+  CREDIT
+  DEBIT
+
+  @@map("ledger_direction")
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+
+  @@map("payout_status")
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+
+  @@map("dispute_status")
+}
+
+model User {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supabaseAuthUserId String       @unique @map("supabase_auth_user_id") @db.Uuid
+  email              String       @unique
+  displayName        String?      @map("display_name")
+  avatarUrl          String?      @map("avatar_url")
+  role               PlatformRole @default(USER)
+  status             UserStatus   @default(ACTIVE)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  providerProfile ProviderProfile?
+  wallet          Wallet?
+  rentals         Rental[]
+  disputes        Dispute[]
+  auditLogs       AuditLog[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model ProviderProfile {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String         @unique @map("user_id") @db.Uuid
+  legalName   String?        @map("legal_name")
+  displayName String         @map("display_name")
+  bio         String?
+  countryCode String?        @map("country_code")
+  status      ProviderStatus @default(PENDING)
+  verifiedAt  DateTime?      @map("verified_at") @db.Timestamptz(6)
+  suspendedAt DateTime?      @map("suspended_at") @db.Timestamptz(6)
+  metadata    Json?          @map("metadata")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentials ProviderCredential[]
+  listings    ProviderListing[]
+  payouts     Payout[]
+  rentals     Rental[]
+  disputes    Dispute[]
+
+  @@index([status])
+  @@map("provider_profiles")
+}
+
+model ProviderCredential {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerProfileId    String           @map("provider_profile_id") @db.Uuid
+  providerType         ProviderType     @map("provider_type")
+  label                String
+  encryptedSecret      String           @map("encrypted_secret")
+  encryptionIv         String           @map("encryption_iv")
+  encryptionTag        String           @map("encryption_tag")
+  encryptionKeyVersion String           @map("encryption_key_version")
+  metadata             Json?
+  supportedModels      String[]         @map("supported_models")
+  status               CredentialStatus @default(PENDING)
+  lastValidatedAt      DateTime?        @map("last_validated_at") @db.Timestamptz(6)
+  lastValidationError  String?          @map("last_validation_error")
+  revokedAt            DateTime?        @map("revoked_at") @db.Timestamptz(6)
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  providerProfile ProviderProfile   @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  listings        ProviderListing[]
+
+  @@index([providerProfileId, status])
+  @@index([providerType])
+  @@map("provider_credentials")
+}
+
+model ProviderListing {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerProfileId    String           @map("provider_profile_id") @db.Uuid
+  providerCredentialId String           @map("provider_credential_id") @db.Uuid
+  title                String
+  slug                 String           @unique
+  description          String?
+  providerType         ProviderType     @map("provider_type")
+  modelFamily          String           @map("model_family")
+  allowedModels        String[]         @map("allowed_models")
+  currencyCode         String           @default("USD") @map("currency_code")
+  hourlyPrice          Decimal          @map("hourly_price") @db.Decimal(18, 6)
+  platformFeeRate      Decimal          @map("platform_fee_rate") @db.Decimal(5, 4)
+  providerRevenueRate  Decimal          @map("provider_revenue_rate") @db.Decimal(5, 4)
+  requestLimit         Int?             @map("request_limit")
+  spendCap             Decimal?         @map("spend_cap") @db.Decimal(18, 6)
+  concurrencyLimit     Int              @default(1) @map("concurrency_limit")
+  listingStatus        ListingStatus    @default(DRAFT) @map("listing_status")
+  visibilityStatus     VisibilityStatus @default(PRIVATE) @map("visibility_status")
+  isFeatured           Boolean          @default(false) @map("is_featured")
+  metadata             Json?            @map("metadata")
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  providerProfile ProviderProfile    @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  credential      ProviderCredential @relation(fields: [providerCredentialId], references: [id], onDelete: Restrict)
+  rentals         Rental[]
+
+  @@index([providerProfileId, listingStatus])
+  @@index([visibilityStatus, listingStatus])
+  @@index([providerType, modelFamily])
+  @@map("provider_listings")
+}
+
+model Rental {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listingId             String         @map("listing_id") @db.Uuid
+  renterUserId          String         @map("renter_user_id") @db.Uuid
+  providerProfileId     String         @map("provider_profile_id") @db.Uuid
+  duration              RentalDuration
+  status                RentalStatus   @default(PENDING)
+  currencyCode          String         @default("USD") @map("currency_code")
+  bookedPrice           Decimal        @map("booked_price") @db.Decimal(18, 6)
+  platformFeeAmount     Decimal        @map("platform_fee_amount") @db.Decimal(18, 6)
+  providerRevenueAmount Decimal        @map("provider_revenue_amount") @db.Decimal(18, 6)
+  requestLimit          Int?           @map("request_limit")
+  spendCap              Decimal?       @map("spend_cap") @db.Decimal(18, 6)
+  modelRestriction      String?        @map("model_restriction")
+  startsAt              DateTime?      @map("starts_at") @db.Timestamptz(6)
+  endsAt                DateTime?      @map("ends_at") @db.Timestamptz(6)
+  activatedAt           DateTime?      @map("activated_at") @db.Timestamptz(6)
+  expiredAt             DateTime?      @map("expired_at") @db.Timestamptz(6)
+  cancelledAt           DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  revokedAt             DateTime?      @map("revoked_at") @db.Timestamptz(6)
+  totalRequests         Int            @default(0) @map("total_requests")
+  totalInputTokens      Int            @default(0) @map("total_input_tokens")
+  totalOutputTokens     Int            @default(0) @map("total_output_tokens")
+  totalCost             Decimal        @default(0) @map("total_cost") @db.Decimal(18, 6)
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  listing       ProviderListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  renter        User            @relation(fields: [renterUserId], references: [id], onDelete: Restrict)
+  provider      ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  sessions      RentalSession[]
+  usageEvents   UsageEvent[]
+  chatMessages  RentalChatMessage[]
+  ledgerEntries LedgerEntry[]
+  disputes      Dispute[]
+  auditLogs     AuditLog[]
+
+  @@index([renterUserId, status])
+  @@index([providerProfileId, status])
+  @@index([listingId, status])
+  @@index([startsAt, endsAt])
+  @@map("rentals")
+}
+
+model RentalSession {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId     String        @map("rental_id") @db.Uuid
+  status       SessionStatus @default(PENDING)
+  tokenHash    String        @unique @map("token_hash")
+  issuedAt     DateTime?     @map("issued_at") @db.Timestamptz(6)
+  expiresAt    DateTime      @map("expires_at") @db.Timestamptz(6)
+  revokedAt    DateTime?     @map("revoked_at") @db.Timestamptz(6)
+  suspendedAt  DateTime?     @map("suspended_at") @db.Timestamptz(6)
+  lastUsedAt   DateTime?     @map("last_used_at") @db.Timestamptz(6)
+  requesterIp  String?       @map("requester_ip")
+  userAgent    String?       @map("user_agent")
+  requestCount Int           @default(0) @map("request_count")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rental      Rental       @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  usageEvents UsageEvent[]
+  chatMessages RentalChatMessage[]
+
+  @@index([rentalId, status])
+  @@index([expiresAt])
+  @@map("rental_sessions")
+}
+
+model UsageEvent {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId        String         @map("rental_id") @db.Uuid
+  rentalSessionId String?        @map("rental_session_id") @db.Uuid
+  eventType       UsageEventType @map("event_type")
+  providerType    ProviderType   @map("provider_type")
+  model           String
+  requestId       String?        @map("request_id")
+  inputTokens     Int?           @map("input_tokens")
+  outputTokens    Int?           @map("output_tokens")
+  totalTokens     Int?           @map("total_tokens")
+  costAmount      Decimal?       @map("cost_amount") @db.Decimal(18, 6)
+  currencyCode    String?        @default("USD") @map("currency_code")
+  statusCode      Int?           @map("status_code")
+  latencyMs       Int?           @map("latency_ms")
+  metadata        Json?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  rental        Rental         @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rentalSession RentalSession? @relation(fields: [rentalSessionId], references: [id], onDelete: SetNull)
+
+  @@index([rentalId, createdAt])
+  @@index([rentalSessionId])
+  @@index([providerType, model])
+  @@map("usage_events")
+}
+
+model RentalChatMessage {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId        String          @map("rental_id") @db.Uuid
+  rentalSessionId String?         @map("rental_session_id") @db.Uuid
+  role            ChatMessageRole
+  model           String?
+  content         String
+  requestId       String?         @map("request_id")
+  metadata        Json?
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  rental        Rental         @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rentalSession RentalSession? @relation(fields: [rentalSessionId], references: [id], onDelete: SetNull)
+
+  @@index([rentalId, createdAt])
+  @@index([rentalSessionId])
+  @@map("rental_chat_messages")
+}
+
+model Wallet {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String       @unique @map("user_id") @db.Uuid
+  status       WalletStatus @default(ACTIVE)
+  currencyCode String       @default("USD") @map("currency_code")
+  balance      Decimal      @default(0) @db.Decimal(18, 6)
+  heldBalance  Decimal      @default(0) @map("held_balance") @db.Decimal(18, 6)
+  metadata     Json?        @map("metadata")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries LedgerEntry[]
+
+  @@index([status])
+  @@map("wallets")
+}
+
+model LedgerEntry {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletId     String          @map("wallet_id") @db.Uuid
+  rentalId     String?         @map("rental_id") @db.Uuid
+  payoutId     String?         @map("payout_id") @db.Uuid
+  entryType    LedgerEntryType @map("entry_type")
+  direction    LedgerDirection
+  amount       Decimal         @db.Decimal(18, 6)
+  currencyCode String          @default("USD") @map("currency_code")
+  balanceAfter Decimal?        @map("balance_after") @db.Decimal(18, 6)
+  reference    String?
+  description  String?
+  metadata     Json?
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  wallet Wallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  rental Rental? @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+  payout Payout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([walletId, createdAt])
+  @@index([rentalId])
+  @@index([payoutId])
+  @@map("ledger_entries")
+}
+
+model Payout {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerProfileId String       @map("provider_profile_id") @db.Uuid
+  amount            Decimal      @db.Decimal(18, 6)
+  currencyCode      String       @default("USD") @map("currency_code")
+  status            PayoutStatus @default(PENDING)
+  externalReference String?      @map("external_reference")
+  requestedAt       DateTime     @default(now()) @map("requested_at") @db.Timestamptz(6)
+  processedAt       DateTime?    @map("processed_at") @db.Timestamptz(6)
+  failureReason     String?      @map("failure_reason")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  providerProfile ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  ledgerEntries   LedgerEntry[]
+
+  @@index([providerProfileId, status])
+  @@map("payouts")
+}
+
+model Dispute {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId          String        @map("rental_id") @db.Uuid
+  openedByUserId    String        @map("opened_by_user_id") @db.Uuid
+  providerProfileId String?       @map("provider_profile_id") @db.Uuid
+  status            DisputeStatus @default(OPEN)
+  reason            String
+  resolution        String?
+  resolvedAt        DateTime?     @map("resolved_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rental          Rental           @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  openedBy        User             @relation(fields: [openedByUserId], references: [id], onDelete: Restrict)
+  providerProfile ProviderProfile? @relation(fields: [providerProfileId], references: [id], onDelete: SetNull)
+
+  @@index([rentalId, status])
+  @@index([openedByUserId])
+  @@map("disputes")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  rentalId   String?  @map("rental_id") @db.Uuid
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  rental Rental? @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([rentalId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
