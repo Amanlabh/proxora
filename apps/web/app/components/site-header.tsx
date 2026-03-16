@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { PlatformRole } from "@/generated/prisma";
 import { getCurrentAppContext } from "@/lib/auth/get-current-app-context";
 import { SignOutButton } from "../auth/sign-out-button";
 
 export async function SiteHeader() {
-  const { sessionUser, appUser } = await getCurrentAppContext();
+  const { sessionUser } = await getCurrentAppContext();
 
   return (
     <header className="site-header">
