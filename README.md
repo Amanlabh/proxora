@@ -54,9 +54,11 @@ Authentication is planned around Supabase Auth, and server environment access sh
 
 ## Contributing
 
-We love our contributors! Please see our [Contributing Guidelines](CONTRIBUTING.md) to get started with creating issues, proposing features, and submitting Pull Requests.
+We love our contributors. Please see our [Contributing Guidelines](CONTRIBUTING.md) to get started with creating issues, proposing features, and submitting Pull Requests.
 
 Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+
+If this project helps you, please star the repo and consider contributing back.
 
 ## License
 
